@@ -1,0 +1,59 @@
+# ==========================================
+# Python (Byte-compiled / Cache / Environment)
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environments (가상환경)
+venv/
+.venv/
+env/
+.env/
+env.bak/
+venv.bak/
+
+# ==========================================
+# IDE / Editor (VS Code & PyCharm)
+# ==========================================
+# Visual Studio Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# PyCharm / JetBrains
+.idea/
+
+# ==========================================
+# Project Specific (로컬 테스트 및 동적 생성 파일)
+# ==========================================
+# 실행 중 생성되거나 갱신되는 로컬 데이터/상태 파일
+state.json
+*.log
+
+# Windows System Files
+Thumbs.db
+Desktop.ini
+
+# macOS System Files
+.DS_Store
