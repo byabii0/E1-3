@@ -3,9 +3,9 @@ import time
 import re
 
 # -----------------------------------------------------------------------------
-# 1. 라벨 정규화 및 부동소수점 허용 오차(Epsilon) 설정
+# 1. 상수 및 라벨 정규화
 # -----------------------------------------------------------------------------
-EPSILON = 1e-9  # 부동소수점 동점 판정 기준
+EPSILON = 1e-9  # 부동소수점 동점 판정 허용 오차
 
 
 def normalize_label(label: str) -> str:
@@ -24,11 +24,11 @@ def normalize_label(label: str) -> str:
 
 
 # -----------------------------------------------------------------------------
-# 2. 순수 반복문 기반 MAC 연산 엔진 (NumPy 등 외부 라이브러리 금지)
+# 2. 순수 반복문 기반 MAC 연산 엔진 (외부 라이브러리 금지)
 # -----------------------------------------------------------------------------
 def mac_2d(matrix_a: list, matrix_b: list) -> float:
     """
-    2차원 배열의 위치별 곱셈 후 총합(MAC 연산)을 계산합니다.
+    입력 패턴과 필터를 위치별로 곱하고 모두 더하는 연산을 수행합니다.
     """
     n = len(matrix_a)
     score = 0.0
@@ -38,35 +38,45 @@ def mac_2d(matrix_a: list, matrix_b: list) -> float:
     return score
 
 
+def measure_mac_time(matrix_a: list, matrix_b: list, iterations: int = 10) -> float:
+    """
+    I/O 시간을 제외하고 순수 MAC 연산 함수 호출 구간만 10회 반복 측정하여 평균(ms)을 반환합니다.
+    """
+    start_t = time.perf_counter()
+    for _ in range(iterations):
+        mac_2d(matrix_a, matrix_b)
+    end_t = time.perf_counter()
+    return ((end_t - start_t) / iterations) * 1000
+
+
 # -----------------------------------------------------------------------------
 # 3. Epsilon 기반 점수 비교 및 판정 로직
 # -----------------------------------------------------------------------------
-def evaluate_decision(score_cross: float, score_x: float) -> str:
+def evaluate_decision(score_a: float, score_b: float, label_a: str = "Cross", label_b: str = "X") -> str:
     """
-    Cross 점수와 X 점수를 비교하여 판정을 내립니다.
-    부동소수점 차이가 EPSILON 미만인 경우 UNDECIDED 처리합니다.
+    허용오차(epsilon) 정책을 적용하여 두 점수를 비교하고 판정 결과를 반환합니다.
     """
-    diff = score_cross - score_x
+    diff = score_a - score_b
     if abs(diff) < EPSILON:
         return "UNDECIDED"
     elif diff > 0:
-        return "Cross"
+        return label_a
     else:
-        return "X"
+        return label_b
 
 
 # -----------------------------------------------------------------------------
-# 4. 사용자 입력 검증 및 행렬 입력 (모드 1)
+# 4. 모드 1: 사용자 입력 처리 및 실행 (3x3)
 # -----------------------------------------------------------------------------
 def input_matrix(size: int, name: str) -> list:
     """
-    n x n 크기의 행렬을 입력을 받으며, 형식 오류 시 재입력을 유도합니다.
+    n x n 크기의 행렬을 한 줄씩(공백 구분) 입력받으며 오류 시 재입력을 유도합니다.
     """
     print(f"\n{name} ({size}줄 입력, 공백 구분)")
     while True:
         matrix = []
         error_occurred = False
-        for i in range(size):
+        for _ in range(size):
             line = input().strip()
             tokens = line.split()
             if len(tokens) != size:
@@ -77,7 +87,7 @@ def input_matrix(size: int, name: str) -> list:
                 row = [float(t) for t in tokens]
                 matrix.append(row)
             except ValueError:
-                print("입력 형식 오류: 숫자 형태로 파싱할 수 없는 값이 포함되어 있습니다.")
+                print(f"입력 형식 오류: 각 줄에 {size}개의 숫자를 공백으로 구분해 입력하세요.")
                 error_occurred = True
                 break
         
@@ -85,54 +95,53 @@ def input_matrix(size: int, name: str) -> list:
             return matrix
 
 
-# -----------------------------------------------------------------------------
-# 5. 모드 1: 사용자 직접 입력 (3x3)
-# -----------------------------------------------------------------------------
 def run_mode_1():
     print("\n#----------------------------------------")
     print("# [1] 필터 입력")
     print("#----------------------------------------")
     filter_a = input_matrix(3, "필터 A")
     filter_b = input_matrix(3, "필터 B")
+    
+    # 실행 흐름 요구사항: 필터 저장 확인
+    print("\n✓ 필터 A (3x3), 필터 B (3x3) 저장이 완료되었습니다.")
 
     print("\n#----------------------------------------")
     print("# [2] 패턴 입력")
     print("#----------------------------------------")
     pattern = input_matrix(3, "패턴")
 
-    # MAC 연산 및 성능 측정 (I/O 제외, 10회 평균)
-    iterations = 10
+    # MAC 연산 수행 및 10회 반복 성능 측정
+    score_a = mac_2d(pattern, filter_a)
+    score_b = mac_2d(pattern, filter_b)
     
-    start_t = time.perf_counter()
-    for _ in range(iterations):
-        score_a = mac_2d(pattern, filter_a)
-    end_t = time.perf_counter()
-    avg_time_a = ((end_t - start_t) / iterations) * 1000
+    time_a = measure_mac_time(pattern, filter_a, iterations=10)
+    time_b = measure_mac_time(pattern, filter_b, iterations=10)
+    avg_time_ms = (time_a + time_b) / 2
 
-    start_t = time.perf_counter()
-    for _ in range(iterations):
-        score_b = mac_2d(pattern, filter_b)
-    end_t = time.perf_counter()
-    avg_time_b = ((end_t - start_t) / iterations) * 1000
-
-    avg_time_ms = (avg_time_a + avg_time_b) / 2
-    decision = evaluate_decision(score_a, score_b)
+    # 모드 1에서는 필터 A, B로 판정
+    decision = evaluate_decision(score_a, score_b, label_a="A", label_b="B")
 
     print("\n#----------------------------------------")
-    print("# [3] MAC 결과")
+    print("# [3] MAC 결과 및 판정")
     print("#----------------------------------------")
     print(f"A 점수: {score_a:.16f}".rstrip('0').rstrip('.'))
     print(f"B 점수: {score_b:.16f}".rstrip('0').rstrip('.'))
-    print(f"연산 시간(평균/{iterations}회): {avg_time_ms:.3f} ms")
-    
     if decision == "UNDECIDED":
-        print(f"판정: 판정 불가 (|A-B| < {EPSILON})")
+        print(f"판정: UNDECIDED (|A-B| < {EPSILON})")
     else:
         print(f"판정: {decision}")
 
+    # 실행 흐름 요구사항: 성능 분석(3x3) 출력
+    print("\n#----------------------------------------")
+    print("# [4] 성능 분석 (평균/10회)")
+    print("#----------------------------------------")
+    print(f"{'크기(N×N)':<12} {'평균 시간(ms)':<16} {'연산 횟수(N²)':<12}")
+    print("-" * 44)
+    print(f"{'3×3':<12} {avg_time_ms:<16.4f} {9:<12}")
+
 
 # -----------------------------------------------------------------------------
-# 6. 모드 2: data.json 로드 및 검증/분석
+# 5. 모드 2: data.json 로드 및 검증/분석
 # -----------------------------------------------------------------------------
 def run_mode_2(json_path: str = "data.json"):
     try:
@@ -168,7 +177,7 @@ def run_mode_2(json_path: str = "data.json"):
         available_labels = ", ".join(loaded_filters[size].keys())
         print(f"✓ {f_key:<8} 필터 로드 완료 ({available_labels})")
 
-    # 2. 패턴 분석 및 검증
+    # 2. 패턴 로드/검증 및 MAC 연산/판정
     print("\n#----------------------------------------")
     print("# [2] 패턴 분석 (라벨 정규화 적용)")
     print("#----------------------------------------")
@@ -177,18 +186,15 @@ def run_mode_2(json_path: str = "data.json"):
     passed_tests = 0
     failed_tests = 0
     fail_details = []
-
-    # 크기별 성능 측정 데이터 저장용 dictionary
-    perf_records = {}  # { size: list_of_avg_times }
+    perf_records = {}
 
     for p_key, p_val in patterns_raw.items():
         total_tests += 1
         print(f"-- {p_key} ---")
 
-        # 키에서 N 추출 (예: size_13_1 -> 13)
         match = re.search(r'size_(\d+)', p_key)
         if not match:
-            msg = f"키에서 크기를 추출할 수 없음 ('{p_key}')"
+            msg = f"키 형식 오류: 크기를 추출할 수 없음 ('{p_key}')"
             print(f"판정: FAIL ({msg})\n")
             failed_tests += 1
             fail_details.append((p_key, msg))
@@ -196,22 +202,20 @@ def run_mode_2(json_path: str = "data.json"):
 
         n = int(match.group(1))
         input_matrix_data = p_val.get("input", [])
-        expected_raw = p_val.get("expected", "")
-        expected = normalize_label(expected_raw)
+        expected = normalize_label(p_val.get("expected", ""))
 
-        # 필터존재 여부 및 스키마 검증
+        # 스키마 및 크기 검증 (불일치 시 프로그램 중단 없이 FAIL 처리)
         if n not in loaded_filters:
-            msg = f"{n}x{n} 크기 필터 미존재"
+            msg = f"{n}×{n} 크기 필터 미존재"
             print(f"판정: FAIL ({msg})\n")
             failed_tests += 1
             fail_details.append((p_key, msg))
             continue
 
-        # 패턴 배열 크기 검증
         row_cnt = len(input_matrix_data)
         col_cnt = len(input_matrix_data[0]) if row_cnt > 0 else 0
-        if row_cnt != n or col_cnt != n:
-            msg = f"크기 불일치(패턴 {row_cnt}x{col_cnt} vs 필터 {n}x{n})"
+        if row_cnt != n or col_cnt != n or any(len(r) != n for r in input_matrix_data):
+            msg = f"크기 불일치 (패턴 {row_cnt}×{col_cnt} vs 필터 {n}×{n})"
             print(f"판정: FAIL ({msg})\n")
             failed_tests += 1
             fail_details.append((p_key, msg))
@@ -221,30 +225,23 @@ def run_mode_2(json_path: str = "data.json"):
         filter_x = loaded_filters[n].get("X")
 
         if not filter_cross or not filter_x:
-            msg = f"{n}x{n} 필터(Cross/X) 구성 누락"
+            msg = f"{n}×{n} 필터(Cross/X) 구성 누락"
             print(f"판정: FAIL ({msg})\n")
             failed_tests += 1
             fail_details.append((p_key, msg))
             continue
 
-        # MAC 연산 수행
+        # MAC 연산 및 시간 측정
         score_cross = mac_2d(input_matrix_data, filter_cross)
         score_x = mac_2d(input_matrix_data, filter_x)
-
-        # 연산 시간 측정 (10회 평균, I/O 제외)
-        iterations = 10
-        t0 = time.perf_counter()
-        for _ in range(iterations):
-            mac_2d(input_matrix_data, filter_cross)
-        t1 = time.perf_counter()
-        avg_time_ms = ((t1 - t0) / iterations) * 1000
+        avg_time_ms = measure_mac_time(input_matrix_data, filter_cross, iterations=10)
 
         if n not in perf_records:
             perf_records[n] = []
         perf_records[n].append(avg_time_ms)
 
-        # 결과 판정
-        decision = evaluate_decision(score_cross, score_x)
+        # Epsilon 판정 및 PASS/FAIL 비교
+        decision = evaluate_decision(score_cross, score_x, label_a="Cross", label_b="X")
 
         print(f"Cross 점수: {score_cross:.16f}".rstrip('0').rstrip('.'))
         print(f"X 점수    : {score_x:.16f}".rstrip('0').rstrip('.'))
@@ -258,20 +255,27 @@ def run_mode_2(json_path: str = "data.json"):
             failed_tests += 1
             fail_details.append((p_key, fail_reason))
 
-    # 3. 크기별 성능 분석 표 출력
+    # 3. 성능 분석 출력 (3x3 포함, 5x5/13x13/25x25 출력)
     print("\n#----------------------------------------")
     print("# [3] 성능 분석 (평균/10회)")
     print("#----------------------------------------")
-    print(f"{'크기':<10} {'평균 시간(ms)':<15} {'연산 횟수(N²)':<12}")
-    print("-" * 42)
+    
+    # data.json에 3x3 데이터가 없을 경우 기준 측정을 위해 기본 3x3 데이터로 측정 추가
+    if 3 not in perf_records:
+        base_3x3 = [[0, 1, 0], [1, 1, 1], [0, 1, 0]]
+        perf_records[3] = [measure_mac_time(base_3x3, base_3x3, iterations=10)]
+
+    print(f"{'크기(N×N)':<12} {'평균 시간(ms)':<16} {'연산 횟수(N²)':<12}")
+    print("-" * 44)
     
     for size in sorted(perf_records.keys()):
         times = perf_records[size]
         avg_time = sum(times) / len(times)
         op_count = size * size
-        print(f"{size}x{size:<8} {avg_time:<15.3f} {op_count:<12}")
+        size_label = f"{size}×{size}"
+        print(f"{size_label:<12} {avg_time:<16.4f} {op_count:<12}")
 
-    # 4. 전체 결과 요약 출력
+    # 4. 결과 요약 출력
     print("\n#----------------------------------------")
     print("# [4] 결과 요약")
     print("#----------------------------------------")
@@ -286,7 +290,7 @@ def run_mode_2(json_path: str = "data.json"):
 
 
 # -----------------------------------------------------------------------------
-# 7. 메인 실행 엔트리 포인트
+# 6. 메인 실행 흐름
 # -----------------------------------------------------------------------------
 def main():
     print("=== Mini NPU Simulator ===")
