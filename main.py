@@ -87,7 +87,7 @@ def input_matrix(size: int, name: str) -> list:
                 row = [float(t) for t in tokens]
                 matrix.append(row)
             except ValueError:
-                print(f"입력 형식 오류: 각 줄에 {size}개의 숫자를 공백으로 구분해 입력하세요.")
+                print(f"입력 값 오류: 숫자만 입력할 수 있습니다. 처음부터 다시 입력하세요.")
                 error_occurred = True
                 break
         
