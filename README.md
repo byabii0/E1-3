@@ -258,7 +258,7 @@ MAC(Multiply-Accumulate) 연산은 입력 패턴과 필터라는 두 2차원 배
 
 3. 결과 리포트(콘솔 + README 제출)
 
-![alt text](image-2.png)
+![alt text](image.png)
 
 결과 리포트
 
