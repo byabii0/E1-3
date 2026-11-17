@@ -206,7 +206,7 @@ $\vert{} \text{score\_cross} - \text{score\_x} \vert{} < 10^{-9}$ 인 경우 UND
 
 모드 2 실행 스크린샷
 
-![alt text](image.png)
+![alt text](image-1.png)
 
 **모드 2에서의 입출력 동작 방식**
 
