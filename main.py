@@ -1,3 +1,4 @@
+import os
 import json
 import time
 import re
@@ -144,11 +145,13 @@ def run_mode_1():
 # 5. 모드 2: data.json 로드 및 검증/분석
 # -----------------------------------------------------------------------------
 def run_mode_2(json_path: str = "data.json"):
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    full_path = os.path.join(base_dir, json_path)
     try:
-        with open(json_path, 'r', encoding='utf-8') as f:
+        with open(full_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
     except FileNotFoundError:
-        print(f"\n[오류] '{json_path}' 파일을 찾을 수 없습니다.")
+        print(f"\n[오류] '{full_path}' 파일을 찾을 수 없습니다.")
         return
     except json.JSONDecodeError as e:
         print(f"\n[오류] JSON 파싱 실패: {e}")
