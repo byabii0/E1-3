@@ -155,7 +155,7 @@ evaluate_decision(승패 판정기): 두 필터의 점수를 비교해 더 높�
 
 모드 1 실행 스크린샷
 
-![alt text](image.png)
+![alt text](image-3.png)
 
 **모드 1에서의 입출력 동작 방식**
 
@@ -206,7 +206,7 @@ $\vert{} \text{score\_cross} - \text{score\_x} \vert{} < 10^{-9}$ 인 경우 UND
 
 모드 2 실행 스크린샷
 
-![alt text](image-1.png)
+![alt text](image.png)
 
 **모드 2에서의 입출력 동작 방식**
 
